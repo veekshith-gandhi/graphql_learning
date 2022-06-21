@@ -1,0 +1,9 @@
+mutation{
+  createUser(name:"veekshith" email:"veekshithgandhi123@gmail.com",age:23){
+    id
+    name
+    email
+    age
+  }
+}
+
