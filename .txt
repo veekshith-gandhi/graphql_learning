@@ -7,3 +7,58 @@ mutation{
   }
 }
 
+mutation{
+  createPost(
+  data:{
+    title:"post 1"
+    body:"post body 1"
+    published:false
+    author:"1"
+  }
+  ) {
+    id
+    body
+    author{
+      name
+    }
+  }
+}
+
+mutation {
+  createComment(data: {text: "comment of 1", author: "1", post: "11"}) {
+    id
+    author {
+      name
+      comment {
+        text
+      }
+    }
+  }
+}
+
+query {
+   user{
+    id
+    name
+    post{
+      title
+      body
+      author{
+        name
+      }
+    }
+  }
+}
+
+query{
+  user{
+    id
+    post{
+      title
+      body
+      comment{
+        text
+      }
+    }
+  }
+}

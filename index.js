@@ -9,7 +9,7 @@ const idGenerator = require("./helper/randomId");
 //ONE USER WILL HAVE MULTIPLE POSTS SO FILTER
 //ONE POST WILL HAVE UNIQUE ID AND MULTIPLE USER MIGHT HAVE SO FIND
 
-const commentData = [
+let commentData = [
   {
     id: "101",
     text: "comment 1",
@@ -35,12 +35,12 @@ const commentData = [
     post: "13",
   },
 ];
-const userData = [
+let userData = [
   { id: "1", name: "arjun", email: "arjun@", age: 23 },
   { id: "2", name: "bhaskar", email: "bhaskar@", age: 53 },
   { id: "3", name: "charu", email: "charu@", age: 13 },
 ];
-const postData = [
+let postData = [
   {
     id: "11",
     title: "scratch and win",
@@ -75,8 +75,11 @@ const server = createServer({
         }
         type Mutation{
           createUser(data: CreateUserInput!): User!
+          deleteUser(id: ID!): User!
           createPost(data: CreatePostInput!): Post!
+          deletePost(id: ID!): Post!
           createComment(data: CreateCommentInput!): Comment!
+          deleteComment(id: ID!): Comment!
         }
         input CreateUserInput{
           name: String!
@@ -145,6 +148,7 @@ const server = createServer({
           };
         },
       },
+
       Mutation: {
         createUser: (parent, args, ctx, info) => {
           const emailExist = userData.some(
@@ -160,6 +164,34 @@ const server = createServer({
           userData.push(user);
           return user;
         },
+
+        deleteUser: (parent, args, ctx, info) => {
+          //GET THE ID TO DELET AND RETURN ITS INDEX VALUYE
+          const userIndex = userData.findIndex((user) => user.id === args.id);
+          //IF NO USER RETURNED INDEX VALUE WILL BE -1
+          if (userIndex == -1) throw new Error("user not existed");
+          // IF USER EXIST THEN CONTINUE DELETING TBHE USER BY INDEX
+          //SPLICING SINGLE ELEMNT
+          const deletdUser = userData.splice(userIndex, 1);
+          //AFTER DELETINGH USER , NO POINT IN KEEPING USER POST
+          //FILTER THE POST AND COMMENT USING AUTHOR ID
+          //  WHEN USER DELETED HIS POST HAS TO DELT COMMENT ON MULTIPLE POST HAS TO
+          postData = postData.filter((post) => {
+            if (post.author == args.id) {
+              commentData = commentData.filter(
+                (comment) => comment.post !== post.id
+              );
+            }
+            return post.author !== args.id;
+          });
+          commentData = commentData.filter(
+            (comment) => comment.author !== args.id
+          );
+          // console.log(postData);
+          // console.log(commentData);
+          // console.log(deletdUser);
+          return deletdUser[0];
+        },
         createPost: (parent, args, ctx, info) => {
           const userExist = userData.some((user) => {
             return user.id === args.data.author;
@@ -172,6 +204,20 @@ const server = createServer({
           postData.push(post);
           return post;
         },
+
+        deletePost: (parent, args, ctx, info) => {
+          const idExist = postData.find((post) => post.id === args.id);
+          if (!idExist) throw new Error("post Id not existed");
+
+          postData = postData.filter((post) => post.id !== args.id);
+          commentData = commentData.filter(
+            (comment) => comment.post !== args.id
+          );
+          console.log(postData);
+          console.log(commentData);
+          return idExist;
+        },
+
         createComment: (parent, args, ctx, info) => {
           const userExist = userData.some((user) => {
             return user.id === args.data.author;
@@ -191,6 +237,16 @@ const server = createServer({
           commentData.push(comment);
           // console.log(commentArray);
           return comment;
+        },
+        deleteComment: (parent, args, ctx, info) => {
+          const commentExist = commentData.find(
+            (comment) => comment.id == args.id
+          );
+          if (!commentExist) throw new Error("Comment dose not exist");
+
+          commentData = commentData.filter((comment) => comment.id !== args.id);
+
+          return commentExist;
         },
       },
       Post: {
@@ -226,7 +282,6 @@ const server = createServer({
         },
         post: (parent, args, ctx, info) => {
           return postData.find((post) => {
-            // console.log(post, parent);
             return post.id === parent.post;
           });
         },
