@@ -36,6 +36,7 @@ const Mutation = {
     //AFTER DELETINGH USER , NO POINT IN KEEPING USER POST
     //FILTER THE POST AND COMMENT USING AUTHOR ID
     //  WHEN USER DELETED HIS POST HAS TO DELT COMMENT ON MULTIPLE POST HAS TO
+
     dataBase.postData = dataBase.postData.filter((post) => {
       if (post.author == args.id) {
         dataBase.commentData = dataBase.commentData.filter(
@@ -47,10 +48,31 @@ const Mutation = {
     dataBase.commentData = dataBase.commentData.filter(
       (comment) => comment.author !== args.id
     );
-    // console.log(postData);
-    // console.log(commentData);
-    // console.log(deletdUser);
     return deletdUser[0];
+  },
+  updateUser: (parent, { id, data }, { dataBase }, info) => {
+    const { userData } = dataBase;
+
+    //CHECKING FOR USER
+    const userExist = userData.find((user) => user.id === id);
+    if (!userExist) throw new Error("User not found");
+
+    if (typeof data.name == "string") {
+      userExist.name = data.name;
+    }
+    //CHECKING FOR DUPLICATE EMAIL
+    if (typeof data.email === "string") {
+      const emailExist = userData.find((user) => user.email === data.email);
+
+      if (emailExist) throw new Error("Email taken");
+      //UPDATING EMAIL
+      userExist.email = data.email;
+    }
+
+    if (data.age) {
+      userExist.age = data.age;
+    }
+    return userExist;
   },
   createPost: (parent, args, { dataBase }, info) => {
     const userExist = dataBase.userData.some((user) => {
@@ -76,6 +98,25 @@ const Mutation = {
     // console.log(postData);
     // console.log(commentData);
     return idExist;
+  },
+
+  updatePost: (parent, { id, data }, { dataBase }, info) => {
+    const { postData } = dataBase;
+
+    //CHECKING FOR USER
+    const postExist = postData.find((post) => post.id === id);
+    if (!postExist) throw new Error("post not found");
+    if (typeof data.title === "string") {
+      postExist.title = data.title;
+    }
+
+    if (typeof data.body === "string") {
+      postExist.body = data.body;
+    }
+    if (typeof data.published === "boolean") {
+      postExist.published = data.published;
+    }
+    return postExist;
   },
 
   createComment: (parent, args, { dataBase }, info) => {
@@ -108,6 +149,17 @@ const Mutation = {
       (comment) => comment.id !== args.id
     );
 
+    return commentExist;
+  },
+  updateComment: (parent, { id, data }, { dataBase }, info) => {
+    const { commentData } = dataBase;
+    //CHECKING FOR USER
+    const commentExist = commentData.find((comment) => comment.id === id);
+    if (!commentExist) throw new Error("comment not found");
+
+    if (typeof data.text === "string") {
+      commentExist.text = data.text;
+    }
     return commentExist;
   },
 };
