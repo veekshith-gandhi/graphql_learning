@@ -74,7 +74,7 @@ const Mutation = {
     }
     return userExist;
   },
-  createPost: (parent, args, { dataBase }, info) => {
+  createPost: (parent, args, { pubsub, dataBase }, info) => {
     const userExist = dataBase.userData.some((user) => {
       return user.id === args.data.author;
     });
@@ -84,10 +84,20 @@ const Mutation = {
       ...args.data,
     };
     dataBase.postData.push(post);
+
+    //SUBSCRIPTIOn
+    if (args.data.published) {
+      pubsub.publish("post", {
+        post: {
+          mutation: "CREATED",
+          data: post,
+        },
+      });
+    }
     return post;
   },
 
-  deletePost: (parent, args, { dataBase }, info) => {
+  deletePost: (parent, args, { dataBase, pubsub }, info) => {
     const idExist = dataBase.postData.find((post) => post.id === args.id);
     if (!idExist) throw new Error("post Id not existed");
 
@@ -95,17 +105,26 @@ const Mutation = {
     dataBase.commentData = dataBase.commentData.filter(
       (comment) => comment.post !== args.id
     );
-    // console.log(postData);
-    // console.log(commentData);
+
+    if (idExist.published) {
+      pubsub.publish("post", {
+        post: {
+          mutation: "DELETED",
+          data: idExist,
+        },
+      });
+    }
     return idExist;
   },
 
-  updatePost: (parent, { id, data }, { dataBase }, info) => {
+  updatePost: (parent, { id, data }, { dataBase, pubsub }, info) => {
     const { postData } = dataBase;
-
     //CHECKING FOR USER
     const postExist = postData.find((post) => post.id === id);
     if (!postExist) throw new Error("post not found");
+
+    const originalPost = { ...postExist };
+
     if (typeof data.title === "string") {
       postExist.title = data.title;
     }
@@ -113,13 +132,38 @@ const Mutation = {
     if (typeof data.body === "string") {
       postExist.body = data.body;
     }
+
+    //CONDITION
     if (typeof data.published === "boolean") {
       postExist.published = data.published;
+      if (originalPost.published && !data.published) {
+        pubsub.publish("post", {
+          post: {
+            mutation: "DELETED",
+            data: originalPost,
+          },
+        });
+      } else if (!originalPost.published && data.published) {
+        pubsub.publish("post", {
+          post: {
+            mutation: "CREATED",
+            data: postExist,
+          },
+        });
+      }
+    } else if (postExist.published) {
+      pubsub.publish("post", {
+        post: {
+          mutation: "UPDATED",
+          data: postExist,
+        },
+      });
     }
+
     return postExist;
   },
 
-  createComment: (parent, args, { dataBase }, info) => {
+  createComment: (parent, args, { dataBase, pubsub }, info) => {
     const userExist = dataBase.userData.some((user) => {
       return user.id === args.data.author;
     });
@@ -135,11 +179,18 @@ const Mutation = {
       id: idGenerator(),
       ...args.data,
     };
+    console.log(args);
     dataBase.commentData.push(comment);
-    // console.log(commentArray);
+    pubsub.publish(`comment ${args.data.post}`, {
+      comment: {
+        mutation: "CREATED",
+        data: comment,
+      },
+    });
     return comment;
   },
-  deleteComment: (parent, args, { dataBase }, info) => {
+  deleteComment: (parent, args, { dataBase, pubsub }, info) => {
+    console.log(args);
     const commentExist = dataBase.commentData.find(
       (comment) => comment.id == args.id
     );
@@ -149,9 +200,16 @@ const Mutation = {
       (comment) => comment.id !== args.id
     );
 
+    pubsub.publish(`comment ${commentExist.post}`, {
+      comment: {
+        mutation: "DELETED",
+        data: commentExist,
+      },
+    });
+
     return commentExist;
   },
-  updateComment: (parent, { id, data }, { dataBase }, info) => {
+  updateComment: (parent, { id, data }, { dataBase, pubsub }, info) => {
     const { commentData } = dataBase;
     //CHECKING FOR USER
     const commentExist = commentData.find((comment) => comment.id === id);
@@ -159,6 +217,12 @@ const Mutation = {
 
     if (typeof data.text === "string") {
       commentExist.text = data.text;
+      pubsub.publish(`comment ${commentExist.post}`, {
+        comment: {
+          mutation: "UPDATED",
+          data: commentExist,
+        },
+      });
     }
     return commentExist;
   },

@@ -75,3 +75,19 @@ query{
     }
   }
 }
+
+
+//DELT
+subscription{
+  post{
+    mutation
+    data{
+      title
+      body
+      published
+      author{
+        name
+      }
+    }
+  }
+}
