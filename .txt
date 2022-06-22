@@ -36,6 +36,19 @@ mutation {
   }
 }
 
+mutation{
+  deleteUser(id:1){
+    name
+  }
+}
+
+mutation{
+  deleteComment(id:101){
+    id
+    text
+  }
+}
+
 query {
    user{
     id
